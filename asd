@@ -21,7 +21,7 @@ local droneAimlockEnabled = false
 local farmEnabled = false
 local teleEnabled = false
 
-local speedMultiplier = 2
+local speedMultiplier = 5
 local maxSpdVal = 100
 local rotRatioVal = 1
 
