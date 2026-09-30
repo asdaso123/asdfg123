@@ -9,6 +9,7 @@ local Camera = workspace.CurrentCamera
 local Drones = workspace:WaitForChild("Drones")
 
 local JammedDroneRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Weapon"):WaitForChild("Jammer"):WaitForChild("JammedDrone")
+local PlayerDroneRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("PlayerDrone")
 
 local espEnabled = false
 local aimlockEnabled = false
@@ -37,7 +38,7 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 220, 0, 160)
+MainFrame.Size = UDim2.new(0, 220, 0, 205)
 MainFrame.Position = UDim2.new(0, 20, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
@@ -80,8 +81,10 @@ local function createButton(name, position, text)
 	return button
 end
 
-local EspButton = createButton("EspButton", UDim2.new(0.075, 0, 0.35, 0), "ESP: OFF")
-local AimlockButton = createButton("AimlockButton", UDim2.new(0.075, 0, 0.65, 0), "Aimlock: OFF")
+local EspButton = createButton("EspButton", UDim2.new(0.075, 0, 0.22, 0), "ESP: OFF")
+local AimlockButton = createButton("AimlockButton", UDim2.new(0.075, 0, 0.45, 0), "Aimlock: OFF")
+local SpawnButton = createButton("SpawnButton", UDim2.new(0.075, 0, 0.68, 0), "Spawn Drone")
+SpawnButton.BackgroundColor3 = Color3.fromRGB(40, 120, 180)
 
 local dragging
 local dragInput
@@ -291,5 +294,11 @@ AimlockButton.MouseButton1Click:Connect(function()
 	else
 		AimlockButton.Text = "Aimlock: OFF"
 		AimlockButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+	end
+end)
+
+SpawnButton.MouseButton1Click:Connect(function()
+	if PlayerDroneRemote then
+		PlayerDroneRemote:FireServer("Wood1")
 	end
 end)
