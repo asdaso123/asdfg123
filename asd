@@ -176,7 +176,7 @@ end
 
 local function isMyDrone(drone)
 	if not drone or not drone:IsA("Model") then return false end
-	for _, child in ipairs(drone:GetGetChildren() or {}) do
+	for _, child in ipairs(drone:GetChildren()) do
 		if child.Name == "Player" then
 			if child:IsA("ObjectValue") and child.Value == LocalPlayer then
 				return true
@@ -197,22 +197,26 @@ local function isMyDrone(drone)
 end
 
 local function applyDroneSettings(drone)
-	if not isMyDrone(drone) then return end
-	local settingsFolder = drone:FindFirstChild("Settings")
-	if settingsFolder then
-		local flyFolder = settingsFolder:FindFirstChild("Fly")
-		if flyFolder then
-			for _, child in ipairs(flyFolder:GetChildren()) do
-				if child.Name == "Acceleration" and child:IsA("ValueBase") then
-					child.Value = accelerationVal
-				elseif child.Name == "MaxSpeed" and child:IsA("ValueBase") then
-					child.Value = maxSpeedVal
-				elseif child.Name == "RotateRatio" and child:IsA("ValueBase") then
-					child.Value = rotateRatioVal
-				end
-			end
-		end
-	end
+	task.spawn(function()
+		local settingsFolder = drone:WaitForChild("Settings", 5)
+		if not settingsFolder then return end
+
+		local flyFolder = settingsFolder:WaitForChild("Fly", 5)
+		if not flyFolder then return end
+
+		task.wait(0.2)
+
+		if not isMyDrone(drone) then return end
+
+		local accel = flyFolder:WaitForChild("Acceleration", 3)
+		if accel and accel:IsA("ValueBase") then accel.Value = accelerationVal end
+
+		local maxSpd = flyFolder:WaitForChild("MaxSpeed", 3)
+		if maxSpd and maxSpd:IsA("ValueBase") then maxSpd.Value = maxSpeedVal end
+
+		local rotRatio = flyFolder:WaitForChild("RotateRatio", 3)
+		if rotRatio and rotRatio:IsA("ValueBase") then rotRatio.Value = rotateRatioVal end
+	end)
 end
 
 local function applySettingsToAllMyDrones()
@@ -276,6 +280,19 @@ local function getMyCurrentDrone()
 				return drone
 			end
 		end
+	end
+	return nil
+end
+
+local function waitForMyDrone(maxWait)
+	local startTime = tick()
+	maxWait = maxWait or 10
+	while tick() - startTime < maxWait do
+		local drone = getMyCurrentDrone()
+		if drone then
+			return drone
+		end
+		task.wait(0.1)
 	end
 	return nil
 end
@@ -358,9 +375,7 @@ end
 
 Drones.ChildAdded:Connect(function(child)
 	addESP(child)
-	task.delay(0.2, function()
-		applyDroneSettings(child)
-	end)
+	applyDroneSettings(child)
 end)
 
 Drones.ChildRemoved:Connect(removeESP)
@@ -508,6 +523,12 @@ DroneAimlockButton.MouseButton1Click:Connect(function()
 	if droneAimlockEnabled then
 		DroneAimlockButton.Text = "Drone Aimlock: ON"
 		DroneAimlockButton.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
+		task.spawn(function()
+			local myDrone = waitForMyDrone(10)
+			if myDrone then
+				applyDroneSettings(myDrone)
+			end
+		end)
 	else
 		DroneAimlockButton.Text = "Drone Aimlock: OFF"
 		DroneAimlockButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
@@ -517,5 +538,11 @@ end)
 SpawnButton.MouseButton1Click:Connect(function()
 	if PlayerDroneRemote then
 		PlayerDroneRemote:FireServer("Wood1")
+		task.spawn(function()
+			local myDrone = waitForMyDrone(10)
+			if myDrone then
+				applyDroneSettings(myDrone)
+			end
+		end)
 	end
 end)
