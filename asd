@@ -13,6 +13,11 @@ local PlayerDroneRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild(
 
 local espEnabled = false
 local aimlockEnabled = false
+local droneAimlockEnabled = false
+
+local accelerationVal = 50
+local maxSpeedVal = 100
+local rotateRatioVal = 5
 
 local MAX_ESP_DISTANCE = 500000
 local COLOR_DANGER = Color3.fromRGB(255, 0, 0)
@@ -38,8 +43,8 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 220, 0, 205)
-MainFrame.Position = UDim2.new(0, 20, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 240, 0, 420)
+MainFrame.Position = UDim2.new(0, 20, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -65,12 +70,12 @@ Title.Parent = MainFrame
 local function createButton(name, position, text)
 	local button = Instance.new("TextButton")
 	button.Name = name
-	button.Size = UDim2.new(0.85, 0, 0, 35)
+	button.Size = UDim2.new(0.88, 0, 0, 32)
 	button.Position = position
 	button.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
 	button.Text = text
 	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.TextSize = 14
+	button.TextSize = 13
 	button.Font = Enum.Font.GothamSemibold
 	button.Parent = MainFrame
 
@@ -81,10 +86,155 @@ local function createButton(name, position, text)
 	return button
 end
 
-local EspButton = createButton("EspButton", UDim2.new(0.075, 0, 0.22, 0), "ESP: OFF")
-local AimlockButton = createButton("AimlockButton", UDim2.new(0.075, 0, 0.45, 0), "Aimlock: OFF")
-local SpawnButton = createButton("SpawnButton", UDim2.new(0.075, 0, 0.68, 0), "Spawn Drone")
+local EspButton = createButton("EspButton", UDim2.new(0.06, 0, 0.10, 0), "ESP: OFF")
+local AimlockButton = createButton("AimlockButton", UDim2.new(0.06, 0, 0.19, 0), "Jammer Lock: OFF")
+local DroneAimlockButton = createButton("DroneAimlockButton", UDim2.new(0.06, 0, 0.28, 0), "Drone Aimlock: OFF")
+local SpawnButton = createButton("SpawnButton", UDim2.new(0.06, 0, 0.37, 0), "Spawn Drone")
 SpawnButton.BackgroundColor3 = Color3.fromRGB(40, 120, 180)
+
+local function createSlider(titleText, posY, minVal, maxVal, defaultVal, callback)
+	local container = Instance.new("Frame")
+	container.Size = UDim2.new(0.88, 0, 0, 45)
+	container.Position = UDim2.new(0.06, 0, posY, 0)
+	container.BackgroundTransparency = 1
+	container.Parent = MainFrame
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 0, 18)
+	label.BackgroundTransparency = 1
+	label.Text = titleText .. ": " .. tostring(defaultVal)
+	label.TextColor3 = Color3.fromRGB(220, 220, 220)
+	label.TextSize = 12
+	label.Font = Enum.Font.GothamSemibold
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = container
+
+	local sliderBg = Instance.new("Frame")
+	sliderBg.Size = UDim2.new(1, 0, 0, 8)
+	sliderBg.Position = UDim2.new(0, 0, 0, 24)
+	sliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	sliderBg.BorderSizePixel = 0
+	sliderBg.Parent = container
+
+	local bgCorner = Instance.new("UICorner")
+	bgCorner.CornerRadius = UDim.new(1, 0)
+	bgCorner.Parent = sliderBg
+
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
+	fill.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+	fill.BorderSizePixel = 0
+	fill.Parent = sliderBg
+
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = fill
+
+	local knob = Instance.new("Frame")
+	knob.Size = UDim2.new(0, 16, 0, 16)
+	knob.AnchorPoint = Vector2.new(0.5, 0.5)
+	knob.Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0)
+	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	knob.BorderSizePixel = 0
+	knob.Parent = sliderBg
+
+	local knobCorner = Instance.new("UICorner")
+	knobCorner.CornerRadius = UDim.new(1, 0)
+	knobCorner.Parent = knob
+
+	local sliding = false
+
+	local function updateInput(input)
+		local posX = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+		fill.Size = UDim2.new(posX, 0, 1, 0)
+		knob.Position = UDim2.new(posX, 0, 0.5, 0)
+
+		local val = math.floor(minVal + (maxVal - minVal) * posX)
+		label.Text = titleText .. ": " .. tostring(val)
+		callback(val)
+	end
+
+	sliderBg.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			sliding = true
+			updateInput(input)
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			updateInput(input)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			sliding = false
+		end
+	end)
+end
+
+local function isMyDrone(drone)
+	if not drone or not drone:IsA("Model") then return false end
+	for _, child in ipairs(drone:GetGetChildren() or {}) do
+		if child.Name == "Player" then
+			if child:IsA("ObjectValue") and child.Value == LocalPlayer then
+				return true
+			elseif child:IsA("StringValue") and (child.Value == LocalPlayer.Name or child.Value == tostring(LocalPlayer.UserId)) then
+				return true
+			end
+		end
+	end
+	local playerVal = drone:FindFirstChild("Player", true) or drone:FindFirstChild("Operator", true)
+	if playerVal then
+		if playerVal:IsA("ObjectValue") and playerVal.Value == LocalPlayer then
+			return true
+		elseif (playerVal:IsA("StringValue") or playerVal:IsA("IntValue")) and (tostring(playerVal.Value) == LocalPlayer.Name or tostring(playerVal.Value) == tostring(LocalPlayer.UserId)) then
+			return true
+		end
+	end
+	return false
+end
+
+local function applyDroneSettings(drone)
+	if not isMyDrone(drone) then return end
+	local settingsFolder = drone:FindFirstChild("Settings")
+	if settingsFolder then
+		local flyFolder = settingsFolder:FindFirstChild("Fly")
+		if flyFolder then
+			for _, child in ipairs(flyFolder:GetChildren()) do
+				if child.Name == "Acceleration" and child:IsA("ValueBase") then
+					child.Value = accelerationVal
+				elseif child.Name == "MaxSpeed" and child:IsA("ValueBase") then
+					child.Value = maxSpeedVal
+				elseif child.Name == "RotateRatio" and child:IsA("ValueBase") then
+					child.Value = rotateRatioVal
+				end
+			end
+		end
+	end
+end
+
+local function applySettingsToAllMyDrones()
+	for _, drone in ipairs(Drones:GetChildren()) do
+		applyDroneSettings(drone)
+	end
+end
+
+createSlider("Acceleration", 0.47, 1, 200, accelerationVal, function(val)
+	accelerationVal = val
+	applySettingsToAllMyDrones()
+end)
+
+createSlider("Max Speed", 0.62, 1, 500, maxSpeedVal, function(val)
+	maxSpeedVal = val
+	applySettingsToAllMyDrones()
+end)
+
+createSlider("Rotate Ratio", 0.77, 1, 50, rotateRatioVal, function(val)
+	rotateRatioVal = val
+	applySettingsToAllMyDrones()
+end)
 
 local dragging
 local dragInput
@@ -118,6 +268,39 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
+local function getMyCurrentDrone()
+	for _, drone in ipairs(Drones:GetChildren()) do
+		if isMyDrone(drone) then
+			local lifeStatus = drone:FindFirstChild("LifeStatus")
+			if not lifeStatus or lifeStatus.Value then
+				return drone
+			end
+		end
+	end
+	return nil
+end
+
+local function getClosestEnemyPlayer(originPos)
+	local closestPlayer = nil
+	local shortestDistance = math.huge
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 then
+				local targetPos = player.Character.HumanoidRootPart.Position
+				local distance = (targetPos - originPos).Magnitude
+				if distance < shortestDistance then
+					shortestDistance = distance
+					closestPlayer = player
+				end
+			end
+		end
+	end
+
+	return closestPlayer
+end
+
 local function addESP(drone)
 	if trackedDrones[drone] then return end
 
@@ -147,6 +330,8 @@ local function addESP(drone)
 		Line = line,
 		Text = text
 	}
+
+	applyDroneSettings(drone)
 end
 
 local function removeESP(drone)
@@ -170,7 +355,14 @@ end
 for _, child in ipairs(Drones:GetChildren()) do
 	addESP(child)
 end
-Drones.ChildAdded:Connect(addESP)
+
+Drones.ChildAdded:Connect(function(child)
+	addESP(child)
+	task.delay(0.2, function()
+		applyDroneSettings(child)
+	end)
+end)
+
 Drones.ChildRemoved:Connect(removeESP)
 
 local function getJammer()
@@ -190,14 +382,16 @@ local function getClosestDrone()
 		and character.HumanoidRootPart.Position or Camera.CFrame.Position
 
 	for _, drone in ipairs(Drones:GetChildren()) do
-		local lifeStatus = drone:FindFirstChild("LifeStatus")
-		if lifeStatus and lifeStatus.Value then
-			local dronePos = drone:GetPivot().Position
-			local distance = (dronePos - originPos).Magnitude
+		if not isMyDrone(drone) then
+			local lifeStatus = drone:FindFirstChild("LifeStatus")
+			if lifeStatus and lifeStatus.Value then
+				local dronePos = drone:GetPivot().Position
+				local distance = (dronePos - originPos).Magnitude
 
-			if distance < shortestDistance then
-				shortestDistance = distance
-				closestDrone = drone
+				if distance < shortestDistance then
+					shortestDistance = distance
+					closestDrone = drone
+				end
 			end
 		end
 	end
@@ -272,6 +466,18 @@ RunService.RenderStepped:Connect(function()
 			end
 		end
 	end
+
+	if droneAimlockEnabled then
+		local myDrone = getMyCurrentDrone()
+		if myDrone then
+			local dronePos = myDrone:GetPivot().Position
+			local targetPlayer = getClosestEnemyPlayer(dronePos)
+			if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+				local targetPos = targetPlayer.Character.HumanoidRootPart.Position
+				Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+			end
+		end
+	end
 end)
 
 EspButton.MouseButton1Click:Connect(function()
@@ -289,11 +495,22 @@ end)
 AimlockButton.MouseButton1Click:Connect(function()
 	aimlockEnabled = not aimlockEnabled
 	if aimlockEnabled then
-		AimlockButton.Text = "Aimlock: ON"
+		AimlockButton.Text = "Jammer Lock: ON"
 		AimlockButton.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
 	else
-		AimlockButton.Text = "Aimlock: OFF"
+		AimlockButton.Text = "Jammer Lock: OFF"
 		AimlockButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+	end
+end)
+
+DroneAimlockButton.MouseButton1Click:Connect(function()
+	droneAimlockEnabled = not droneAimlockEnabled
+	if droneAimlockEnabled then
+		DroneAimlockButton.Text = "Drone Aimlock: ON"
+		DroneAimlockButton.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
+	else
+		DroneAimlockButton.Text = "Drone Aimlock: OFF"
+		DroneAimlockButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
 	end
 end)
 
