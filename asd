@@ -16,7 +16,7 @@ local droneAimlockEnabled = false
 
 local accelerationVal = 50
 local maxSpeedVal = 100
-local rotateRatioVal = 5
+local rotateRatioVal = 1
 
 local MAX_ESP_DISTANCE = 500000
 local COLOR_DANGER = Color3.fromRGB(255, 0, 0)
@@ -179,7 +179,7 @@ local function applySettingsToAllMyDrones()
 	end
 end
 
-local function createSlider(titleText, posY, minVal, maxVal, defaultVal, callback)
+local function createSlider(titleText, posY, minVal, maxVal, defaultVal, isFloat, callback)
 	local container = Instance.new("Frame")
 	container.Size = UDim2.new(0.88, 0, 0, 45)
 	container.Position = UDim2.new(0.06, 0, posY, 0)
@@ -187,14 +187,25 @@ local function createSlider(titleText, posY, minVal, maxVal, defaultVal, callbac
 	container.Parent = MainFrame
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0, 18)
+	label.Size = UDim2.new(0.6, 0, 0, 18)
 	label.BackgroundTransparency = 1
-	label.Text = titleText .. ": " .. tostring(defaultVal)
+	label.Text = titleText .. ":"
 	label.TextColor3 = Color3.fromRGB(220, 220, 220)
 	label.TextSize = 12
 	label.Font = Enum.Font.GothamSemibold
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = container
+
+	local inputBox = Instance.new("TextBox")
+	inputBox.Size = UDim2.new(0.4, 0, 0, 18)
+	inputBox.Position = UDim2.new(0.6, 0, 0, 0)
+	inputBox.BackgroundTransparency = 1
+	inputBox.Text = tostring(defaultVal)
+	inputBox.TextColor3 = Color3.fromRGB(0, 162, 255)
+	inputBox.TextSize = 12
+	inputBox.Font = Enum.Font.GothamBold
+	inputBox.TextXAlignment = Enum.TextXAlignment.Right
+	inputBox.Parent = container
 
 	local sliderBg = Instance.new("Frame")
 	sliderBg.Size = UDim2.new(1, 0, 0, 8)
@@ -230,15 +241,25 @@ local function createSlider(titleText, posY, minVal, maxVal, defaultVal, callbac
 	knobCorner.Parent = knob
 
 	local sliding = false
+	local currentVal = defaultVal
+
+	local function setVisuals(val)
+		local clampedVal = math.clamp(val, minVal, maxVal)
+		currentVal = clampedVal
+		local pct = (clampedVal - minVal) / (maxVal - minVal)
+		fill.Size = UDim2.new(pct, 0, 1, 0)
+		knob.Position = UDim2.new(pct, 0, 0.5, 0)
+		
+		local formattedVal = isFloat and string.format("%.2f", clampedVal) or tostring(math.floor(clampedVal))
+		inputBox.Text = formattedVal
+		callback(isFloat and clampedVal or math.floor(clampedVal))
+	end
 
 	local function updateInput(input)
 		local posX = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
-		fill.Size = UDim2.new(posX, 0, 1, 0)
-		knob.Position = UDim2.new(posX, 0, 0.5, 0)
-
-		local val = math.floor(minVal + (maxVal - minVal) * posX)
-		label.Text = titleText .. ": " .. tostring(val)
-		callback(val)
+		local val = minVal + (maxVal - minVal) * posX
+		if not isFloat then val = math.floor(val) end
+		setVisuals(val)
 	end
 
 	sliderBg.InputBegan:Connect(function(input)
@@ -259,19 +280,28 @@ local function createSlider(titleText, posY, minVal, maxVal, defaultVal, callbac
 			sliding = false
 		end
 	end)
+
+	inputBox.FocusLost:Connect(function()
+		local num = tonumber(inputBox.Text)
+		if num then
+			setVisuals(num)
+		else
+			setVisuals(currentVal)
+		end
+	end)
 end
 
-createSlider("Acceleration", 0.51, 1, 500, accelerationVal, function(val)
+createSlider("Acceleration", 0.51, 0, 1000, accelerationVal, false, function(val)
 	accelerationVal = val
 	applySettingsToAllMyDrones()
 end)
 
-createSlider("Max Speed", 0.65, 1, 800, maxSpeedVal, function(val)
+createSlider("Max Speed", 0.65, 0, 1000, maxSpeedVal, false, function(val)
 	maxSpeedVal = val
 	applySettingsToAllMyDrones()
 end)
 
-createSlider("Rotate Ratio", 0.79, 1, 100, rotateRatioVal, function(val)
+createSlider("Rotate Ratio", 0.79, 0.1, 2, rotateRatioVal, true, function(val)
 	rotateRatioVal = val
 	applySettingsToAllMyDrones()
 end)
