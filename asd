@@ -18,6 +18,7 @@ local PlayerDroneRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild(
 local espEnabled = false
 local aimlockEnabled = false
 local droneAimlockEnabled = false
+local autoExplodeEnabled = false
 
 local accelerationVal = 50
 local maxSpeedVal = 100
@@ -67,43 +68,56 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 560)
-MainFrame.Position = UDim2.new(0, 30, 0.15, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+MainFrame.Size = UDim2.new(0, 340, 0, 460)
+MainFrame.Position = UDim2.new(0.5, -170, 0.5, -230)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+MainFrame.BackgroundTransparency = 0.15
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
 
 local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(50, 50, 58)
-UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(60, 60, 75)
+UIStroke.Thickness = 1.5
 UIStroke.Parent = MainFrame
 
 local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 44)
+TopBar.Size = UDim2.new(1, 0, 0, 46)
 TopBar.BackgroundTransparency = 1
 TopBar.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0.7, 0, 1, 0)
-Title.Position = UDim2.new(0, 14, 0, 0)
+Title.Size = UDim2.new(0.6, 0, 1, 0)
+Title.Position = UDim2.new(0, 16, 0, 0)
 Title.BackgroundTransparency = 1
 Title.Text = "Drone Controller"
-Title.TextColor3 = Color3.fromRGB(240, 240, 245)
+Title.TextColor3 = Color3.fromRGB(245, 245, 250)
 Title.TextSize = 16
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = TopBar
 
+local CreditLabel = Instance.new("TextLabel")
+CreditLabel.Size = UDim2.new(1, -20, 0, 16)
+CreditLabel.Position = UDim2.new(0, 16, 1, -22)
+CreditLabel.BackgroundTransparency = 1
+CreditLabel.Text = "Made by Anndrr1y"
+CreditLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
+CreditLabel.TextSize = 11
+CreditLabel.Font = Enum.Font.GothamMedium
+CreditLabel.TextXAlignment = Enum.TextXAlignment.Left
+CreditLabel.Parent = MainFrame
+
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 32, 0, 32)
 CloseButton.AnchorPoint = Vector2.new(1, 0.5)
-CloseButton.Position = UDim2.new(1, -10, 0.5, 0)
-CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CloseButton.Text = "X"
+CloseButton.Position = UDim2.new(1, -12, 0.5, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+CloseButton.BackgroundTransparency = 0.2
+CloseButton.Text = "✕"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.TextSize = 14
 CloseButton.Font = Enum.Font.GothamBold
@@ -118,51 +132,115 @@ CloseButton.MouseButton1Click:Connect(function()
 	ScreenGui:Destroy()
 end)
 
-local ScrollingFrame = Instance.new("ScrollingFrame")
-ScrollingFrame.Size = UDim2.new(1, 0, 1, -44)
-ScrollingFrame.Position = UDim2.new(0, 0, 0, 44)
-ScrollingFrame.BackgroundTransparency = 1
-ScrollingFrame.BorderSizePixel = 0
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 620)
-ScrollingFrame.ScrollBarThickness = 6
-ScrollingFrame.Parent = MainFrame
+local NavContainer = Instance.new("Frame")
+NavContainer.Size = UDim2.new(1, -32, 0, 40)
+NavContainer.Position = UDim2.new(0, 16, 0, 50)
+NavContainer.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+NavContainer.BackgroundTransparency = 0.2
+NavContainer.BorderSizePixel = 0
+NavContainer.Parent = MainFrame
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 10)
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIListLayout.Parent = ScrollingFrame
+local NavCorner = Instance.new("UICorner")
+NavCorner.CornerRadius = UDim.new(0, 8)
+NavCorner.Parent = NavContainer
 
-local UIPadding = Instance.new("UIPadding")
-UIPadding.PaddingTop = UDim.new(0, 6)
-UIPadding.PaddingBottom = UDim.new(0, 20)
-UIPadding.Parent = ScrollingFrame
+local NavLayout = Instance.new("UIListLayout")
+NavLayout.FillDirection = Enum.FillDirection.Horizontal
+NavLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+NavLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+NavLayout.SortOrder = Enum.SortOrder.LayoutOrder
+NavLayout.Parent = NavContainer
 
-local function createSectionHeader(text, order)
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.9, 0, 0, 24)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = Color3.fromRGB(140, 140, 160)
-	label.TextSize = 12
-	label.Font = Enum.Font.GothamBold
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.LayoutOrder = order
-	label.Parent = ScrollingFrame
-	return label
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Size = UDim2.new(1, -32, 1, -132)
+ContentContainer.Position = UDim2.new(0, 16, 0, 98)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.Parent = MainFrame
+
+local pages = {}
+local navButtons = {}
+
+local function createPage(name)
+	local page = Instance.new("ScrollingFrame")
+	page.Name = name .. "Page"
+	page.Size = UDim2.new(1, 0, 1, 0)
+	page.BackgroundTransparency = 1
+	page.BorderSizePixel = 0
+	page.CanvasSize = UDim2.new(0, 0, 0, 280)
+	page.ScrollBarThickness = 4
+	page.Visible = false
+	page.Parent = ContentContainer
+
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 12)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.Parent = page
+
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 4)
+	padding.PaddingBottom = UDim.new(0, 10)
+	padding.Parent = page
+
+	pages[name] = page
+	return page
 end
 
-local function createButton(name, text, color, order)
+local function switchPage(pageName)
+	for name, page in pairs(pages) do
+		page.Visible = (name == pageName)
+	end
+	for name, btn in pairs(navButtons) do
+		if name == pageName then
+			btn.BackgroundColor3 = Color3.fromRGB(0, 132, 255)
+			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		else
+			btn.BackgroundColor3 = Color3.fromRGB(38, 38, 48)
+			btn.TextColor3 = Color3.fromRGB(160, 160, 180)
+		end
+	end
+end
+
+local function createNavButton(name, text, order)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.48, 0, 0, 32)
+	btn.BackgroundColor3 = Color3.fromRGB(38, 38, 48)
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(160, 160, 180)
+	btn.TextSize = 13
+	btn.Font = Enum.Font.GothamSemibold
+	btn.LayoutOrder = order
+	btn.Parent = NavContainer
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = btn
+
+	btn.MouseButton1Click:Connect(function()
+		switchPage(name)
+	end)
+
+	navButtons[name] = btn
+	return btn
+end
+
+createNavButton("Combat", "Features", 1)
+createNavButton("Settings", "Settings", 2)
+createPage("Combat")
+createPage("Settings")
+
+local function createButton(pageName, name, text, color, order)
 	local button = Instance.new("TextButton")
 	button.Name = name
-	button.Size = UDim2.new(0.9, 0, 0, 40)
+	button.Size = UDim2.new(1, 0, 0, 42)
 	button.BackgroundColor3 = color
+	button.BackgroundTransparency = 0.15
 	button.Text = text
 	button.TextColor3 = Color3.fromRGB(255, 255, 255)
 	button.TextSize = 14
 	button.Font = Enum.Font.GothamSemibold
 	button.LayoutOrder = order
-	button.Parent = ScrollingFrame
+	button.Parent = pages[pageName]
 
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 8)
@@ -171,16 +249,17 @@ local function createButton(name, text, color, order)
 	return button
 end
 
-createSectionHeader("FEATURES & COMBAT", 1)
-local EspButton = createButton("EspButton", "ESP: OFF", Color3.fromRGB(180, 40, 40), 2)
-local AimlockButton = createButton("AimlockButton", "Jammer Lock: OFF", Color3.fromRGB(180, 40, 40), 3)
-local DroneAimlockButton = createButton("DroneAimlockButton", "Drone Aimlock: OFF", Color3.fromRGB(180, 40, 40), 4)
+createButton("Combat", "EspButton", "ESP: OFF", Color3.fromRGB(180, 40, 40), 1)
+createButton("Combat", "AimlockButton", "Jammer Lock: OFF", Color3.fromRGB(180, 40, 40), 2)
+createButton("Combat", "DroneAimlockButton", "Drone Aimlock: OFF", Color3.fromRGB(180, 40, 40), 3)
+createButton("Combat", "AutoExplodeButton", "Auto Explode Drones: OFF", Color3.fromRGB(180, 40, 40), 4)
+createButton("Combat", "SpawnButton", "Spawn Drone", Color3.fromRGB(40, 120, 180), 5)
 
-createSectionHeader("ACTIONS", 5)
-local SpawnButton = createButton("SpawnButton", "Spawn Drone", Color3.fromRGB(40, 120, 180), 6)
-local ExplodeButton = createButton("ExplodeButton", "Explode Drones", Color3.fromRGB(180, 80, 0), 7)
-
-createSectionHeader("DRONE SETTINGS", 8)
+local EspButton = pages["Combat"]:FindFirstChild("EspButton")
+local AimlockButton = pages["Combat"]:FindFirstChild("AimlockButton")
+local DroneAimlockButton = pages["Combat"]:FindFirstChild("DroneAimlockButton")
+local AutoExplodeButton = pages["Combat"]:FindFirstChild("AutoExplodeButton")
+local SpawnButton = pages["Combat"]:FindFirstChild("SpawnButton")
 
 local function getActiveDrones()
 	local drones = {}
@@ -248,27 +327,36 @@ local function applySettingsToAllMyDrones()
 	end
 end
 
+local function setDroneCollisions(drone, state)
+	for _, part in ipairs(drone:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = state
+		end
+	end
+end
+
 local function createSlider(titleText, minVal, maxVal, defaultVal, isFloat, order, callback)
 	local container = Instance.new("Frame")
-	container.Size = UDim2.new(0.9, 0, 0, 52)
+	container.Size = UDim2.new(1, 0, 0, 52)
 	container.BackgroundTransparency = 1
 	container.LayoutOrder = order
-	container.Parent = ScrollingFrame
+	container.Parent = pages["Settings"]
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.5, 0, 0, 20)
+	label.Size = UDim2.new(0.6, 0, 0, 20)
 	label.BackgroundTransparency = 1
 	label.Text = titleText
-	label.TextColor3 = Color3.fromRGB(210, 210, 220)
+	label.TextColor3 = Color3.fromRGB(210, 210, 225)
 	label.TextSize = 13
 	label.Font = Enum.Font.GothamSemibold
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = container
 
 	local inputBox = Instance.new("TextBox")
-	inputBox.Size = UDim2.new(0.5, 0, 0, 20)
-	inputBox.Position = UDim2.new(0.5, 0, 0, 0)
-	inputBox.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+	inputBox.Size = UDim2.new(0.4, 0, 0, 20)
+	inputBox.Position = UDim2.new(0.6, 0, 0, 0)
+	inputBox.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+	inputBox.BackgroundTransparency = 0.2
 	inputBox.Text = tostring(defaultVal)
 	inputBox.TextColor3 = Color3.fromRGB(0, 162, 255)
 	inputBox.TextSize = 13
@@ -281,9 +369,9 @@ local function createSlider(titleText, minVal, maxVal, defaultVal, isFloat, orde
 	boxCorner.Parent = inputBox
 
 	local sliderBg = Instance.new("Frame")
-	sliderBg.Size = UDim2.new(1, 0, 0, 10)
-	sliderBg.Position = UDim2.new(0, 0, 0, 30)
-	sliderBg.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+	sliderBg.Size = UDim2.new(1, 0, 0, 8)
+	sliderBg.Position = UDim2.new(0, 0, 0, 28)
+	sliderBg.BackgroundColor3 = Color3.fromRGB(38, 38, 48)
 	sliderBg.BorderSizePixel = 0
 	sliderBg.Parent = container
 
@@ -302,7 +390,7 @@ local function createSlider(titleText, minVal, maxVal, defaultVal, isFloat, orde
 	fillCorner.Parent = fill
 
 	local knob = Instance.new("Frame")
-	knob.Size = UDim2.new(0, 20, 0, 20)
+	knob.Size = UDim2.new(0, 18, 0, 18)
 	knob.AnchorPoint = Vector2.new(0.5, 0.5)
 	knob.Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0)
 	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -364,20 +452,22 @@ local function createSlider(titleText, minVal, maxVal, defaultVal, isFloat, orde
 	end)
 end
 
-createSlider("Acceleration", 0, 1000, accelerationVal, false, 9, function(val)
+createSlider("Acceleration", 0, 1000, accelerationVal, false, 1, function(val)
 	accelerationVal = val
 	applySettingsToAllMyDrones()
 end)
 
-createSlider("Max Speed", 0, 1000, maxSpeedVal, false, 10, function(val)
+createSlider("Max Speed", 0, 1000, maxSpeedVal, false, 2, function(val)
 	maxSpeedVal = val
 	applySettingsToAllMyDrones()
 end)
 
-createSlider("Rotate Ratio", 0.1, 2, rotateRatioVal, true, 11, function(val)
+createSlider("Rotate Ratio", 0.1, 2, rotateRatioVal, true, 3, function(val)
 	rotateRatioVal = val
 	applySettingsToAllMyDrones()
 end)
+
+switchPage("Combat")
 
 local dragging
 local dragInput
@@ -510,6 +600,7 @@ local function onDroneAdded(child)
 	if child:IsA("Model") and (string.find(child.Name, "Drone") or string.find(child.Name, "DronePlayer")) then
 		addESP(child)
 		if isMyDrone(child) then
+			setDroneCollisions(child, not autoExplodeEnabled)
 			applyDroneSettings(child)
 		end
 	end
@@ -667,6 +758,7 @@ DroneAimlockButton.MouseButton1Click:Connect(function()
 		task.spawn(function()
 			local myDrone = waitForMyDrone(10)
 			if myDrone then
+				setDroneCollisions(myDrone, not autoExplodeEnabled)
 				applyDroneSettings(myDrone)
 			end
 		end)
@@ -676,29 +768,31 @@ DroneAimlockButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+AutoExplodeButton.MouseButton1Click:Connect(function()
+	autoExplodeEnabled = not autoExplodeEnabled
+	if autoExplodeEnabled then
+		AutoExplodeButton.Text = "Auto Explode Drones: ON"
+		AutoExplodeButton.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
+	else
+		AutoExplodeButton.Text = "Auto Explode Drones: OFF"
+		AutoExplodeButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+	end
+	for _, drone in ipairs(getActiveDrones()) do
+		if isMyDrone(drone) then
+			setDroneCollisions(drone, not autoExplodeEnabled)
+		end
+	end
+end)
+
 SpawnButton.MouseButton1Click:Connect(function()
 	if PlayerDroneRemote then
 		PlayerDroneRemote:FireServer("Wood1")
 		task.spawn(function()
 			local myDrone = waitForMyDrone(10)
 			if myDrone then
+				setDroneCollisions(myDrone, not autoExplodeEnabled)
 				applyDroneSettings(myDrone)
 			end
 		end)
-	end
-end)
-
-ExplodeButton.MouseButton1Click:Connect(function()
-	local character = LocalPlayer.Character
-	if character then
-		local rootPart = character:FindFirstChild("HumanoidRootPart")
-		if rootPart then
-			local targetCFrame = rootPart.CFrame
-			for _, drone in ipairs(getActiveDrones()) do
-				pcall(function()
-					drone:PivotTo(targetCFrame)
-				end)
-			end
-		end
 	end
 end)
