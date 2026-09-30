@@ -18,7 +18,6 @@ local PlayerDroneRemote = ReplicatedStorage:WaitForChild("Events"):WaitForChild(
 local espEnabled = false
 local aimlockEnabled = false
 local droneAimlockEnabled = false
-local autoExplodeEnabled = false
 
 local accelerationVal = 50
 local maxSpeedVal = 100
@@ -252,14 +251,14 @@ end
 createButton("Combat", "EspButton", "ESP: OFF", Color3.fromRGB(180, 40, 40), 1)
 createButton("Combat", "AimlockButton", "Jammer Lock: OFF", Color3.fromRGB(180, 40, 40), 2)
 createButton("Combat", "DroneAimlockButton", "Drone Aimlock: OFF", Color3.fromRGB(180, 40, 40), 3)
-createButton("Combat", "AutoExplodeButton", "Auto Explode Drones: OFF", Color3.fromRGB(180, 40, 40), 4)
-createButton("Combat", "SpawnButton", "Spawn Drone", Color3.fromRGB(40, 120, 180), 5)
+createButton("Combat", "SpawnButton", "Spawn Drone", Color3.fromRGB(40, 120, 180), 4)
+createButton("Combat", "ExplodeButton", "Explode Drones", Color3.fromRGB(180, 80, 0), 5)
 
 local EspButton = pages["Combat"]:FindFirstChild("EspButton")
 local AimlockButton = pages["Combat"]:FindFirstChild("AimlockButton")
 local DroneAimlockButton = pages["Combat"]:FindFirstChild("DroneAimlockButton")
-local AutoExplodeButton = pages["Combat"]:FindFirstChild("AutoExplodeButton")
 local SpawnButton = pages["Combat"]:FindFirstChild("SpawnButton")
+local ExplodeButton = pages["Combat"]:FindFirstChild("ExplodeButton")
 
 local function getActiveDrones()
 	local drones = {}
@@ -327,10 +326,18 @@ local function applySettingsToAllMyDrones()
 	end
 end
 
-local function setDroneCollisions(drone, state)
+local function disableDroneCollisions(drone)
 	for _, part in ipairs(drone:GetDescendants()) do
 		if part:IsA("BasePart") then
-			part.CanCollide = state
+			part.CanCollide = false
+		end
+	end
+end
+
+local function enableDroneCollisions(drone)
+	for _, part in ipairs(drone:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = true
 		end
 	end
 end
@@ -600,7 +607,7 @@ local function onDroneAdded(child)
 	if child:IsA("Model") and (string.find(child.Name, "Drone") or string.find(child.Name, "DronePlayer")) then
 		addESP(child)
 		if isMyDrone(child) then
-			setDroneCollisions(child, not autoExplodeEnabled)
+			disableDroneCollisions(child)
 			applyDroneSettings(child)
 		end
 	end
@@ -758,7 +765,7 @@ DroneAimlockButton.MouseButton1Click:Connect(function()
 		task.spawn(function()
 			local myDrone = waitForMyDrone(10)
 			if myDrone then
-				setDroneCollisions(myDrone, not autoExplodeEnabled)
+				disableDroneCollisions(myDrone)
 				applyDroneSettings(myDrone)
 			end
 		end)
@@ -768,31 +775,31 @@ DroneAimlockButton.MouseButton1Click:Connect(function()
 	end
 end)
 
-AutoExplodeButton.MouseButton1Click:Connect(function()
-	autoExplodeEnabled = not autoExplodeEnabled
-	if autoExplodeEnabled then
-		AutoExplodeButton.Text = "Auto Explode Drones: ON"
-		AutoExplodeButton.BackgroundColor3 = Color3.fromRGB(40, 180, 40)
-	else
-		AutoExplodeButton.Text = "Auto Explode Drones: OFF"
-		AutoExplodeButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-	end
-	for _, drone in ipairs(getActiveDrones()) do
-		if isMyDrone(drone) then
-			setDroneCollisions(drone, not autoExplodeEnabled)
-		end
-	end
-end)
-
 SpawnButton.MouseButton1Click:Connect(function()
 	if PlayerDroneRemote then
 		PlayerDroneRemote:FireServer("Wood1")
 		task.spawn(function()
 			local myDrone = waitForMyDrone(10)
 			if myDrone then
-				setDroneCollisions(myDrone, not autoExplodeEnabled)
+				disableDroneCollisions(myDrone)
 				applyDroneSettings(myDrone)
 			end
 		end)
+	end
+end)
+
+ExplodeButton.MouseButton1Click:Connect(function()
+	local character = LocalPlayer.Character
+	if character then
+		local rootPart = character:FindFirstChild("HumanoidRootPart")
+		if rootPart then
+			local targetCFrame = rootPart.CFrame
+			for _, drone in ipairs(getActiveDrones()) do
+				pcall(function()
+					enableDroneCollisions(drone)
+					drone:PivotTo(targetCFrame)
+				end)
+			end
+		end
 	end
 end)
