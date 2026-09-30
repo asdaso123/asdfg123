@@ -19,14 +19,14 @@ local espEnabled = false
 local aimlockEnabled = false
 local droneAimlockEnabled = false
 
-local speedMultiplier = 2
+local speedMultiplier = 50
 local maxSpdVal = 100
 local rotRatioVal = 1
 
 local COLOR_DANGER = Color3.fromRGB(240, 60, 60)
+local COLOR_IN_RANGE = Color3.fromRGB(60, 220, 100)
 
 local trackedDrones = {}
-local trackedPlayers = {}
 
 local mt = getrawmetatable(game)
 local oldIndex = mt.__index
@@ -61,8 +61,8 @@ else
 end
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 320, 0, 440)
-Frame.Position = UDim2.new(0.5, -160, 0.5, -220)
+Frame.Size = UDim2.new(0, 320, 0, 400)
+Frame.Position = UDim2.new(0.5, -160, 0.5, -200)
 Frame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 Frame.BorderSizePixel = 0
 Frame.Parent = Gui
@@ -141,14 +141,12 @@ mkBtn("EspBtn", "ESP: OFF", 1)
 mkBtn("LockBtn", "Jammer Lock: OFF", 2)
 mkBtn("DroneLockBtn", "Drone Aim: OFF", 3)
 mkBtn("SpawnBtn", "Spawn Drone", 4)
-mkBtn("TeleportBtn", "Teleport Drone", 5)
-mkBtn("ExplodeBtn", "Explode Drones", 6)
+mkBtn("ExplodeBtn", "Explode Drones", 5)
 
 local EspBtn = Frame:FindFirstChild("EspBtn")
 local LockBtn = Frame:FindFirstChild("LockBtn")
 local DroneLockBtn = Frame:FindFirstChild("DroneLockBtn")
 local SpawnBtn = Frame:FindFirstChild("SpawnBtn")
-local TeleportBtn = Frame:FindFirstChild("TeleportBtn")
 local ExplodeBtn = Frame:FindFirstChild("ExplodeBtn")
 
 local function getActiveDrones()
@@ -244,39 +242,6 @@ local function removeEsp(d)
 	end
 end
 
-local function addPlayerEsp(p)
-	if trackedPlayers[p] then return end
-	local h = Instance.new("Highlight")
-	h.FillColor = COLOR_DANGER
-	h.OutlineColor = COLOR_DANGER
-	h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	h.Parent = p.Character
-
-	local l = Drawing.new("Line")
-	l.Color = COLOR_DANGER
-	l.Thickness = 1
-	l.Visible = false
-
-	local t = Drawing.new("Text")
-	t.Color = COLOR_DANGER
-	t.Size = 13
-	t.Center = true
-	t.Outline = true
-	t.Visible = false
-
-	trackedPlayers[p] = {Highlight = h, Line = l, Text = t}
-end
-
-local function removePlayerEsp(p)
-	local data = trackedPlayers[p]
-	if data then
-		if data.Highlight then data.Highlight:Destroy() end
-		if data.Line then data.Line:Remove() end
-		if data.Text then data.Text:Remove() end
-		trackedPlayers[p] = nil
-	end
-end
-
 local function onAdd(c)
 	if c:IsA("Model") and (string.find(c.Name, "Drone") or string.find(c.Name, "DronePlayer")) then
 		addEsp(c)
@@ -295,29 +260,6 @@ end
 workspace.ChildAdded:Connect(onAdd)
 workspace.ChildRemoved:Connect(removeEsp)
 
-for _, p in ipairs(Players:GetPlayers()) do
-	if p ~= LocalPlayer then
-		if p.Character then addPlayerEsp(p) end
-		p.CharacterAdded:Connect(function()
-			task.wait(1)
-			addPlayerEsp(p)
-		end)
-	end
-end
-
-Players.PlayerAdded:Connect(function(p)
-	if p ~= LocalPlayer then
-		p.CharacterAdded:Connect(function()
-			task.wait(1)
-			addPlayerEsp(p)
-		end)
-	end
-end)
-
-Players.PlayerRemoving:Connect(function(p)
-	removePlayerEsp(p)
-end)
-
 RunService.RenderStepped:Connect(function()
 	local camPos = Camera.CFrame.Position
 	local vp = Camera.ViewportSize
@@ -335,32 +277,6 @@ RunService.RenderStepped:Connect(function()
 				data.Line.Visible = true
 				data.Text.Position = Vector2.new(screenPos.X, screenPos.Y - 20)
 				data.Text.Text = math.floor(dist) .. "s"
-				data.Text.Visible = true
-			else
-				data.Highlight.Enabled = false
-				data.Line.Visible = false
-				data.Text.Visible = false
-			end
-		else
-			if data.Highlight then data.Highlight.Enabled = false end
-			data.Line.Visible = false
-			data.Text.Visible = false
-		end
-	end
-
-	for p, data in pairs(trackedPlayers) do
-		if espEnabled and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-			local hrp = p.Character.HumanoidRootPart
-			local pos = hrp.Position
-			local dist = (pos - camPos).Magnitude
-			local screenPos, onScreen = Camera:WorldToViewportPoint(pos)
-			if onScreen and dist <= 500000 then
-				data.Highlight.Enabled = true
-				data.Line.From = bot
-				data.Line.To = Vector2.new(screenPos.X, screenPos.Y)
-				data.Line.Visible = true
-				data.Text.Position = Vector2.new(screenPos.X, screenPos.Y - 20)
-				data.Text.Text = p.Name .. " [" .. math.floor(dist) .. "s]"
 				data.Text.Visible = true
 			else
 				data.Highlight.Enabled = false
@@ -414,9 +330,7 @@ RunService.RenderStepped:Connect(function()
 				end
 			end
 			if targetP then
-				local targetPos = targetP.Character.HumanoidRootPart.Position
-				Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-				myD:PivotTo(CFrame.new(myPos, targetPos))
+				Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetP.Character.HumanoidRootPart.Position)
 			end
 		end
 	end
@@ -448,21 +362,6 @@ SpawnBtn.MouseButton1Click:Connect(function()
 				task.wait(0.1)
 			end
 		end)
-	end
-end)
-
-TeleportBtn.MouseButton1Click:Connect(function()
-	local char = LocalPlayer.Character
-	if char and char:FindFirstChild("HumanoidRootPart") then
-		local rootPart = char.HumanoidRootPart
-		for _, d in ipairs(getActiveDrones()) do
-			if isMyDrone(d) then
-				pcall(function()
-					setCollisions(d, false)
-					d:PivotTo(rootPart.CFrame + Vector3.new(0, 3, 0))
-				end)
-			end
-		end
 	end
 end)
 
