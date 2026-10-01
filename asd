@@ -19,7 +19,7 @@ local espEnabled = false
 local aimlockEnabled = false
 local droneAimlockEnabled = false
 
-local accelerationVal = 50
+local accelerationVal = 1
 local maxSpeedVal = 100
 local rotateRatioVal = 1
 
